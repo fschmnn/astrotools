@@ -122,10 +122,10 @@ class Regions:
 
         Parameters 
         ----------
-        input_pix : list of tuples
-            List of tuples where each tuple (x,y) contains the coordinates
         output_projection : Header or WCS
             header or wcs object to which the coordinates are projected  
+        shape : tuple
+            if output_projection is not a Header, we also need the shape
 
         Returns
         -------
@@ -156,7 +156,9 @@ class Regions:
         output_pix = []
         for c in world:
             x,y = np.unique(wcs.all_world2pix(c,0).astype(int),axis=0).T[::-1]
-            output_pix.append((x,y))
+            out_of_bounds = (x<0) | (x>=shape[1]) | (y<0) | (y>=shape[0])
+            output_pix.append((x[~out_of_bounds],y[~out_of_bounds]))
+        
         return Regions(coords=output_pix,labels=self.labels,shape=shape,projection=wcs)
       
     def plot(self,image=None,regions=True,contours=True,filename=None,percent=99,figsize=(7,7),**kwargs):

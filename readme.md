@@ -22,6 +22,14 @@ to install
 python setup.py develop
 ```
 
+Required packages:
+
+**[Astropy Regions](https://astropy-regions.readthedocs.io/en/stable/index.html)**
+
+```
+conda install -c conda-forge regions
+```
+
 
 
 ## Usage

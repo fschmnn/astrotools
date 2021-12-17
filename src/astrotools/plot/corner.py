@@ -39,7 +39,8 @@ def corner_density_scatter(x,y,ax,nbins=10,**kwargs):
     
     hist, x_e, y_e = np.histogram2d(x,y,bins=nbins,range=[xlim,ylim],density=True)
     z = interpn((0.5*(x_e[1:] + x_e[:-1]) , 0.5*(y_e[1:]+y_e[:-1]) ),hist,np.vstack([x,y]).T,method="nearest",bounds_error=False)
-    sc=ax.scatter(x,y,c=z,**kwargs)
+    vmin,vmax=np.nanpercentile(z,[15,95])
+    sc=ax.scatter(x,y,c=z,vmin=vmin,vmax=vmax,**kwargs)
 
     return 0
 
