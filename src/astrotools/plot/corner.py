@@ -66,14 +66,12 @@ def corner_gaussian_kde_scatter(x,y,ax,**kwargs):
     z = gaussian_kde(xy)(xy)
     idx = z.argsort()
     x, y, z = x[idx], y[idx], z[idx]
-    sc=ax.scatter(x,y,c=z,cmap=plt.cm.Reds,**kwargs)
+    sc=ax.scatter(x,y,c=z,**kwargs)
 
     return 0
 
 def corner_binned_stat2d(x,y,ax,z,nbins=10,**kwargs):
-    '''
-    
-    '''
+    '''make a scatter plot of x and y with the color based on binned stats of z'''
 
     xlim=ax.get_xlim()
     ylim=ax.get_ylim()
@@ -88,9 +86,8 @@ def corner_binned_stat2d(x,y,ax,z,nbins=10,**kwargs):
     return 0
 
 def corner_binned_stat2d_histogram(x,y,ax,z,nbins=10,**kwargs):
-    '''
-    
-    '''
+    '''show z binned based on x and y'''
+
 
     xlim=ax.get_xlim()
     ylim=ax.get_ylim()
@@ -102,14 +99,28 @@ def corner_binned_stat2d_histogram(x,y,ax,z,nbins=10,**kwargs):
 
     return 0
 
-def corner_binned_percentile(x,y,ax,nbins=10,n=68,**kwargs):
+def corner_binned_percentile(x,y,ax,nbins=10,range=None,n=68,**kwargs):
+    '''plot the n percentile of y along the xaxis'''
 
     x,y = x[~np.isnan(x) & ~np.isnan(y)], y[~np.isnan(x) & ~np.isnan(y)]
 
-    pl, edges, _ = binned_statistic(x,y,statistic=lambda data: np.percentile(data,50+n/2),bins=nbins)
-    pu, edges, _ = binned_statistic(x,y,statistic=lambda data: np.percentile(data,50-n/2),bins=nbins)
+    pl, edges, _ = binned_statistic(x,y,statistic=lambda data: np.percentile(data,50+n/2),bins=nbins,range=range)
+    pu, edges, _ = binned_statistic(x,y,statistic=lambda data: np.percentile(data,50-n/2),bins=nbins,range=range)
     xp = (edges[1:]+edges[:-1])/2
     ax.fill_between(xp,y1=pl,y2=pu,**kwargs)
+
+
+def corner_violin(x,y,ax,positions,**kwargs):
+    '''create violin plots for the data'''
+
+    x,y = x[~np.isnan(y)],y[~np.isnan(y)]
+    
+    bins = (positions[1:]+positions[:-1])/2
+    binned_data = [y[(bins[i]<x) & (x<bins[i+1])] for i in range(len(bins)-1)]
+
+    ax.violinplot(binned_data,positions=positions[1:-1],**kwargs)
+    
+    return 0
 
 def corner(table,columns,function=None,limits={},labels={},filename=None,figsize=10,aspect_ratio=1,**kwargs):
     '''Create a pairwise plot for all names in columns
@@ -147,14 +158,17 @@ def corner(table,columns,function=None,limits={},labels={},filename=None,figsize
                     ax.set_xticklabels([])
 
                 # we set the axis limit before we plot the data (some functions might need the limits)
-                ax.set(xlim=limits.get(col,[np.min(table[col]),np.max(table[col])]),ylim=limits.get(row,[np.min(table[row]),np.max(table[row])]))
+                xlim = limits.get(col,[np.min(table[col]),np.max(table[col])])
+                ylim = limits.get(row,[np.min(table[row]),np.max(table[row])])
+                ax.set(xlim=xlim,ylim=ylim)
 
                 # make sure there are no NaN in the data points
                 x,y = table[col],table[row]
+                x,y = x[(xlim[0]<=x) & (x<=xlim[1]) & (ylim[0]<=y) & (y<=ylim[1])],y[(xlim[0]<=x) & (x<=xlim[1]) & (ylim[0]<=y) & (y<=ylim[1])]
                 
                 # either use a special function for the plot or just use a scatter plot
                 if function:
-                    function(x,y,ax,**kwargs)
+                    function(x,y,ax,xlim=xlim)
                 else:
                     ax.scatter(x,y,**kwargs)
 
@@ -172,6 +186,8 @@ def corner_old(table,columns,limits={},labels={},colors=None,nbins=10,one_to_one
           figsize=10,aspect_ratio=1,**kwargs):
     '''Create a pairwise plot for all names in columns
     
+    !!!Deprecated!!!
+
     Parameters
     ----------
     

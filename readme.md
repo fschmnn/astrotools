@@ -16,18 +16,56 @@ This package collects general purpose functions that are used in several project
 
 ## Installation
 
-to install 
+to install this package
 
 ```bash
 python setup.py develop
 ```
 
-Required packages:
+
+
+### Required packages:
+
+**[NumPy](https://numpy.org/)**
+
+```
+conda install numpy
+```
+
+**[matplotlib](https://matplotlib.org/)**
+
+```
+conda install matplotlib
+```
+
+**[astropy](https://www.astropy.org/)**
+
+```
+conda install astropy
+```
+
+**[scipy](https://scipy.org/)**
+
+```
+ conda install scipy 
+```
 
 **[Astropy Regions](https://astropy-regions.readthedocs.io/en/stable/index.html)**
 
 ```
 conda install -c conda-forge regions
+```
+
+**[scikit-image](https://scikit-image.org/)**
+
+``` 
+conda install scikit-image
+```
+
+**[reproject](https://reproject.readthedocs.io/en/stable/#)**
+
+```
+conda install -c astropy reproject
 ```
 
 
