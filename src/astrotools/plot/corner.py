@@ -16,7 +16,7 @@ def corner_scatter(x,y,ax,**kwargs):
     return 0 
 
 def corner_binned_stat(x,y,ax,nbins=10,**kwargs):
-    '''a scatter plot with binned trends'''
+    '''a scatter plot with binned trends in y'''
 
     xlim = ax.get_xlim()
 
@@ -38,7 +38,7 @@ def corner_density_scatter(x,y,ax,nbins=10,**kwargs):
     ylim=ax.get_ylim()
     
     hist, x_e, y_e = np.histogram2d(x,y,bins=nbins,range=[xlim,ylim],density=True)
-    z = interpn((0.5*(x_e[1:] + x_e[:-1]) , 0.5*(y_e[1:]+y_e[:-1]) ),hist,np.vstack([x,y]).T,method="nearest",bounds_error=False)
+    z = interpn((0.5*(x_e[1:] + x_e[:-1]) , 0.5*(y_e[1:]+y_e[:-1]) ),hist,np.vstack([x,y]).T,method="linear",bounds_error=False)
     vmin,vmax=np.nanpercentile(z,[15,95])
     sc=ax.scatter(x,y,c=z,vmin=vmin,vmax=vmax,**kwargs)
 
@@ -122,7 +122,16 @@ def corner_violin(x,y,ax,positions,**kwargs):
     
     return 0
 
-def corner(table,columns,function=None,limits={},labels={},filename=None,figsize=10,aspect_ratio=1,**kwargs):
+def corner_spearmanr(x,y,ax,position):
+    '''calculate Spearman correlation coefficient'''
+
+    not_nan = ~np.isnan(x) & ~np.isnan(y)
+    r,p = spearmanr(x[not_nan],y[not_nan])
+    t = ax.text(*position,r'$\rho'+f'={r:.2f}$',transform=ax.transAxes,fontsize=7)
+    t.set_bbox(dict(facecolor='white', alpha=1, ec='white'))
+
+
+def corner(table,columns,function=None,histogram=True,limits={},labels={},filename=None,figsize=10,aspect_ratio=1,**kwargs):
     '''Create a pairwise plot for all names in columns
     
     Parameters
@@ -140,10 +149,10 @@ def corner(table,columns,function=None,limits={},labels={},filename=None,figsize
     '''
     
     # create a figure with the correct proportions
-    fig, axes = plt.subplots(nrows=len(columns)-1,ncols=len(columns),figsize=(figsize,aspect_ratio*(len(columns)/(len(columns)+1))*figsize))
-
+    nrows, ncols = len(columns)-1, len(columns)-1
+    fig, axes = plt.subplots(nrows=nrows,ncols=ncols,figsize=(figsize,figsize*aspect_ratio*ncols/nrows))
     for i,row in enumerate(columns[1:]):
-        for j,col in enumerate(columns):
+        for j,col in enumerate(columns[:-1]):
             ax=axes[i,j]
             if j>i:
                 ax.remove()
@@ -171,8 +180,8 @@ def corner(table,columns,function=None,limits={},labels={},filename=None,figsize
                     function(x,y,ax,xlim=xlim)
                 else:
                     ax.scatter(x,y,**kwargs)
-
             fix_aspect_ratio(ax,aspect_ratio=aspect_ratio)
+
 
     plt.subplots_adjust(wspace=0.12, hspace=0.12)
     
