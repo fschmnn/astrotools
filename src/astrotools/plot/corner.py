@@ -15,7 +15,7 @@ def corner_scatter(x,y,ax,**kwargs):
 
     return 0 
 
-def corner_binned_stat(x,y,ax,nbins=10,**kwargs):
+def corner_binned_stat(x,y,ax,nbins=10,color='black',**kwargs):
     '''a scatter plot with binned trends in y'''
 
     xlim = ax.get_xlim()
@@ -27,7 +27,7 @@ def corner_binned_stat(x,y,ax,nbins=10,**kwargs):
     r,p = spearmanr(x[not_nan],y[not_nan])
 
     x,mean,std = bin_stat(x,y,xlim,nbins=nbins,statistic='median')
-    ax.errorbar(x,mean,yerr=std,fmt='-',color='gray',lw=0.5)
+    ax.errorbar(x,mean,yerr=None,fmt='-',color=color,**kwargs)
 
     return 0
 
@@ -113,25 +113,28 @@ def corner_binned_percentile(x,y,ax,nbins=10,range=None,n=68,**kwargs):
 def corner_violin(x,y,ax,positions,**kwargs):
     '''create violin plots for the data'''
 
-    x,y = x[~np.isnan(y)],y[~np.isnan(y)]
+    #x,y = x[~np.isnan(y)],y[~np.isnan(y)]
     
     bins = (positions[1:]+positions[:-1])/2
     binned_data = [y[(bins[i]<x) & (x<bins[i+1])] for i in range(len(bins)-1)]
 
     ax.violinplot(binned_data,positions=positions[1:-1],**kwargs)
     
-    return 0
+    return binned_data
 
-def corner_spearmanr(x,y,ax,position):
+def corner_spearmanr(x,y,ax,position=(0.93,0.93),pvalue=False,**kwargs):
     '''calculate Spearman correlation coefficient'''
 
     not_nan = ~np.isnan(x) & ~np.isnan(y)
     r,p = spearmanr(x[not_nan],y[not_nan])
-    t = ax.text(*position,r'$\rho'+f'={r:.2f}$',transform=ax.transAxes,fontsize=7)
+
+    label = r'$\rho'+f'={r:.2f}$'
+    if pvalue: label+=f', p={100*p:.1f}\%'
+    t = ax.text(*position,label,transform=ax.transAxes,ha='right',va='top',**kwargs)
     t.set_bbox(dict(facecolor='white', alpha=1, ec='white'))
 
 
-def corner(table,columns,function=None,histogram=True,limits={},labels={},filename=None,figsize=10,aspect_ratio=1,**kwargs):
+def corner(table,columns,function=None,histogram=False,limits={},labels={},filename=None,figsize=10,aspect_ratio=1,**kwargs):
     '''Create a pairwise plot for all names in columns
     
     Parameters

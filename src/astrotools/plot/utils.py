@@ -77,6 +77,60 @@ def create_RGB(r,g,b,stretch='linear',weights=None,percentile=95):
     
     return rgb
 
+def create_RGB_new(r,g,b):
+    '''combie three arrays to one RGB image
+    
+    Parameters
+    ----------
+    r : ndarray
+        (n,m) array that is used for the red channel
+        
+    g : ndarray
+        (n,m) array that is used for the green channel
+        
+    b : ndarray
+        (n,m) array that is used for the blue channel
+    
+    percentile : float
+        percentile that is used for the normalization
+        
+    Returns
+    -------
+    rgb : ndarray
+        (n,m,3) array that is normalized to 1
+    '''
+
+    if not r.shape == g.shape == b.shape:
+        raise ValueError('input arrays must have the dimensions')
+    
+    weights = [1,1,1]
+
+    # create an empty array with the correct size
+    rgb = np.empty((*r.shape,3))
+    
+    r_lim = np.nanpercentile(r,[51,94])
+    g_lim = np.nanpercentile(g,[61,94])
+    b_lim = np.nanpercentile(b,[1,98])
+
+    # assign the input arrays to the 3 channels and normalize them to 1
+    rgb[...,0] = weights[0]*(r-r_lim[0]) / (r_lim[1]-r_lim[0])
+    rgb[...,1] = weights[1]*(g-g_lim[0]) / (g_lim[1]-g_lim[0])
+    rgb[...,2] = weights[2]*(b-b_lim[0]) / (b_lim[1]-b_lim[0])
+
+    if False:
+        fig,ax=plt.subplots()
+        ax.hist(rgb[...,0].flatten(),bins=np.linspace(0,1,20),label='red',alpha=0.5)
+        ax.hist(rgb[...,1].flatten(),bins=np.linspace(0,1,20),label='green',alpha=0.5)
+        ax.hist(rgb[...,2].flatten(),bins=np.linspace(0,1,20),label='blue',alpha=0.5)
+        ax.legend()
+        plt.show()
+
+    #rgb /= np.nanpercentile(rgb,percentile)
+    
+    # clip values (we use percentile for the normalization) and fill nan
+    rgb = np.clip(np.nan_to_num(rgb,nan=1),a_min=0,a_max=1)
+    
+    return rgb
 
 def quick_plot(data,wcs=None,figsize=(two_column,two_column),cmap=plt.cm.hot,filename=None,**kwargs):
     '''create a quick plot 
@@ -198,9 +252,53 @@ def bin_stat(x,y,xlim,nbins=10,statistic='mean'):
     '''calculate the binned statistics'''
 
     # just ignore nan values
-    x = x[~np.isnan(y) & np.isfinite(y)]
-    y = y[~np.isnan(y) & np.isfinite(y)]
+    x, y = x[~np.isnan(y) & np.isfinite(y)], y[~np.isnan(y) & np.isfinite(y)]
 
     mean, edges, _ = binned_statistic(x,y,statistic=statistic,bins=nbins,range=xlim)
     std, _, _ = binned_statistic(x,y,statistic='std',bins=nbins,range=xlim)
     return (edges[1:]+edges[:-1])/2,mean,std
+
+
+def hex_to_rgb(value):
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i + lv // 3], 16)/255 for i in range(0, lv, lv // 3))
+
+def rgb_to_hex(rgb):
+    return '#%02x%02x%02x' % rgb
+
+def create_multi_rgb(images,
+                   colors=['#ff0000','#00ff00','#0000ff'],
+                   percentile=None):
+    '''combie multiple arrays to one RGB image
+    
+    Parameters 
+    ----------
+    
+    images : list of images
+    
+    colors : the colors to which the images are assigned (default r,g,b)
+    
+    percentile : percentile that is used 
+    '''
+    
+    if not percentile:
+        percentile = [(0,100) for i in range(len(images))]
+            
+    colors_rgb = np.vstack([hex_to_rgb(x) for x in colors])
+
+    # create an empty array with the correct size
+    rgb = np.zeros((*images[0].shape,3))
+    
+    for i,image in enumerate(images):
+        lim = np.nanpercentile(image,percentile[i])
+        scaled_img = (image-lim[0]) / (lim[1]-lim[0])
+        
+        rgb[...,0] += scaled_img * colors_rgb[i,0] / np.sum(colors_rgb[...,0]) * colors_rgb[i,0] / np.sum(colors_rgb[i,...])
+        rgb[...,1] += scaled_img * colors_rgb[i,1] / np.sum(colors_rgb[...,1]) * colors_rgb[i,1] / np.sum(colors_rgb[i,...])
+        rgb[...,2] += scaled_img * colors_rgb[i,2] / np.sum(colors_rgb[...,2]) * colors_rgb[i,2] / np.sum(colors_rgb[i,...])
+
+    # clip values (we use percentile for the normalization) and fill nan
+    rgb = np.clip(np.nan_to_num(rgb,nan=1),a_min=0,a_max=1)
+    
+    return rgb
