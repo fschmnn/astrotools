@@ -14,6 +14,8 @@ from .strong_line_methods import strong_line_metallicity_R, strong_line_metallic
 from .direct_methods import electron_density_sulfur, \
                             electron_temperature_oxygen, electron_temperature_sulfur, electron_temperature_nitrogen, \
                             oxygen_abundance_direct
+from .ionization import logq_D91
+
 from .utils import diagnostic_line_ratios
 
 __all__ = [
@@ -24,5 +26,6 @@ __all__ = [
             'electron_temperature_sulfur',
             'electron_temperature_nitrogen',
             'oxygen_abundance_direct',
-            'diagnostic_line_ratios'
+            'diagnostic_line_ratios',
+            'logq_D91'
           ]
