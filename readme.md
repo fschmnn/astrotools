@@ -77,7 +77,7 @@ pip install pyneb
 ```
 
 
-**[photuils](https://photutils.readthedocs.io/en/stable/index.html)**
+**[photutils ](https://photutils.readthedocs.io/en/stable/index.html)**
 
 ```
 conda install photutils -c astropy
