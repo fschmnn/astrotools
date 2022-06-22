@@ -68,6 +68,29 @@ conda install scikit-image
 conda install -c astropy reproject
 ```
 
+used in other projects
+
+**[pyneb](http://research.iac.es/proyecto/PyNeb//)**
+
+```
+pip install pyneb
+```
+
+
+**[photutils ](https://photutils.readthedocs.io/en/stable/index.html)**
+
+```
+conda install photutils -c astropy
+```
+
+**Also useful**
+
+```
+conda install -c conda-forge jupyter_contrib_nbextensions
+conda install -c conda-forge jupyter_nbextensions_configurator
+```
+
+
 
 
 ## Usage
