@@ -15,18 +15,17 @@ def corner_scatter(x,y,ax,**kwargs):
 
     return 0 
 
-def corner_binned_stat(x,y,ax,nbins=10,color='black',**kwargs):
+def corner_binned_stat(x,y,ax,bins=10,color='black',**kwargs):
     '''a scatter plot with binned trends in y'''
 
     xlim = ax.get_xlim()
-
-    #ax.scatter(x,y,**kwargs)
-
-    # calculate spearmann correlation
-    not_nan = ~np.isnan(x) & ~np.isnan(y)
-    r,p = spearmanr(x[not_nan],y[not_nan])
-
-    x,mean,std = bin_stat(x,y,xlim,nbins=nbins,statistic='median')
+    #x,mean,std = bin_stat(x,y,bins=bins,range=xlim,statistic='median')
+    
+    # just ignore nan values
+    x, y = x[np.isfinite(x) & np.isfinite(y)], y[np.isfinite(x) & np.isfinite(y)]
+    mean, edges, _ = binned_statistic(x,y,statistic='median',bins=bins,range=xlim)
+    x = (edges[1:]+edges[:-1])/2
+    
     ax.errorbar(x,mean,yerr=None,fmt='-',color=color,**kwargs)
 
     return 0
@@ -129,12 +128,12 @@ def corner_spearmanr(x,y,ax,position=(0.93,0.93),pvalue=False,**kwargs):
     r,p = spearmanr(x[not_nan],y[not_nan])
 
     label = r'$\rho'+f'={r:.2f}$'
-    if pvalue: label+=f', p={100*p:.1f}\%'
+    if pvalue: label+=f', p={100*p:.3f}\%'
     t = ax.text(*position,label,transform=ax.transAxes,ha='right',va='top',**kwargs)
     t.set_bbox(dict(facecolor='white', alpha=1, ec='white'))
 
 
-def corner(table,columns,function=None,histogram=False,limits={},labels={},filename=None,figsize=10,aspect_ratio=1,**kwargs):
+def corner(table,columns,function=None,histogram=False,limits={},labels={},scale={},filename=None,figsize=10,aspect_ratio=1,**kwargs):
     '''Create a pairwise plot for all names in columns
     
     Parameters
@@ -153,6 +152,80 @@ def corner(table,columns,function=None,histogram=False,limits={},labels={},filen
     
     # create a figure with the correct proportions
     nrows, ncols = len(columns)-1, len(columns)-1
+
+    if histogram:
+        nrows+=1
+        ncols+=1
+
+    fig, axes = plt.subplots(nrows=nrows,ncols=ncols,figsize=(figsize,figsize*aspect_ratio*ncols/nrows))
+    for i,row in enumerate(columns[1:]):
+        for j,col in enumerate(columns[:-1]):
+            ax=axes[i,j]
+            if j>i:
+                ax.remove()
+            else:
+                # we need to set the scale before 
+                ax.set(xscale=scale.get(col,'linear'),yscale=scale.get(row,'linear'))
+                if j==0:
+                    ax.set_ylabel(labels.get(row,row.replace("_","")))
+                else:
+                    ax.set_yticklabels([])
+                if i==len(columns)-2:
+                    ax.set_xlabel(labels.get(col,col.replace("_","")))
+                else:
+                    ax.set_xticklabels([])
+     
+
+                # we set the axis limit before we plot the data (some functions might need the limits)
+                xlim = limits.get(col,[np.min(table[col]),np.max(table[col])])
+                ylim = limits.get(row,[np.min(table[row]),np.max(table[row])])
+                ax.set(xlim=xlim,ylim=ylim)
+
+                # make sure there are no NaN in the data points
+                x,y = table[col],table[row]
+                x,y = x[np.isfinite(x) & np.isfinite(y)], y[np.isfinite(x) & np.isfinite(y)]
+                #x,y = x[(xlim[0]<=x) & (x<=xlim[1]) & (ylim[0]<=y) & (y<=ylim[1])],y[(xlim[0]<=x) & (x<=xlim[1]) & (ylim[0]<=y) & (y<=ylim[1])]
+                
+                # either use a special function for the plot or just use a scatter plot
+                if function:
+                    function(x,y,ax,xlim=xlim)
+                else:
+                    ax.scatter(x,y,**kwargs)
+            fix_aspect_ratio(ax,aspect_ratio=aspect_ratio)
+
+
+    plt.subplots_adjust(wspace=0.12, hspace=0.12)
+    
+    if filename:
+        plt.savefig(filename,dpi=600)
+
+    plt.show()
+
+
+
+def corner_by_galaxy(table,sample_table,columns,limits={},labels={},nbins=7,filename=None,figsize=10,aspect_ratio=1,**kwargs):
+    '''Create a pairwise plot for all names in columns
+    
+    Parameters
+    ----------
+    
+    table : table with the data
+    
+    columns : list of the columns that should be used
+    
+    limits : dictionary with the limits (tuple) for the columns
+
+    labels : dictionary with the axis labels 
+
+    filename : name of the file to save to
+    '''
+    
+    cmap = mpl.cm.get_cmap('plasma')
+    norm = mpl.colors.Normalize(vmin=9.4,vmax=11)
+
+    # create a figure with the correct proportions
+    nrows, ncols = len(columns)-1, len(columns)-1
+
     fig, axes = plt.subplots(nrows=nrows,ncols=ncols,figsize=(figsize,figsize*aspect_ratio*ncols/nrows))
     for i,row in enumerate(columns[1:]):
         for j,col in enumerate(columns[:-1]):
@@ -174,113 +247,32 @@ def corner(table,columns,function=None,histogram=False,limits={},labels={},filen
                 ylim = limits.get(row,[np.min(table[row]),np.max(table[row])])
                 ax.set(xlim=xlim,ylim=ylim)
 
-                # make sure there are no NaN in the data points
+                for k,gal_name in enumerate(np.unique(table['gal_name'])):
+                    
+                    tmp = table[table['gal_name']==gal_name]
+
+                    # make sure there are no NaN in the data points
+                    x,y = tmp[col],tmp[row]
+                    x,y = x[(xlim[0]<=x) & (x<=xlim[1]) & (ylim[0]<=y) & (y<=ylim[1])],y[(xlim[0]<=x) & (x<=xlim[1]) & (ylim[0]<=y) & (y<=ylim[1])]
+                    x, y = x[~np.isnan(y) & np.isfinite(y)], y[~np.isnan(y) & np.isfinite(y)]
+
+                    if len(x)>0:
+                        mean, edges, _ = binned_statistic(x,y,statistic='median',bins=nbins,range=xlim)
+                        std, _, _ = binned_statistic(x,y,statistic='std',bins=nbins,range=xlim)
+                        x,mean,std = (edges[1:]+edges[:-1])/2,mean,std
+                        ax.errorbar(x,mean,fmt='o-',ms=1.5,color=cmap(norm(sample_table.loc[gal_name]['mass'])),label=gal_name)
+
                 x,y = table[col],table[row]
                 x,y = x[(xlim[0]<=x) & (x<=xlim[1]) & (ylim[0]<=y) & (y<=ylim[1])],y[(xlim[0]<=x) & (x<=xlim[1]) & (ylim[0]<=y) & (y<=ylim[1])]
-                
-                # either use a special function for the plot or just use a scatter plot
-                if function:
-                    function(x,y,ax,xlim=xlim)
-                else:
-                    ax.scatter(x,y,**kwargs)
+                x, y = x[~np.isnan(y) & np.isfinite(y)], y[~np.isnan(y) & np.isfinite(y)]
+
+                mean, edges, _ = binned_statistic(x,y,statistic='median',bins=7,range=xlim)
+                std, _, _ = binned_statistic(x,y,statistic='std',bins=7,range=xlim)
+                x,mean,std = (edges[1:]+edges[:-1])/2,mean,std
+                ax.errorbar(x,mean,fmt='o-',ms=1.5,color='black',label=gal_name)
+
             fix_aspect_ratio(ax,aspect_ratio=aspect_ratio)
 
-
-    plt.subplots_adjust(wspace=0.12, hspace=0.12)
-    
-    if filename:
-        plt.savefig(filename,dpi=600)
-
-    plt.show()
-
-
-def corner_old(table,columns,limits={},labels={},colors=None,nbins=10,one_to_one=False,filename=None,
-          figsize=10,aspect_ratio=1,**kwargs):
-    '''Create a pairwise plot for all names in columns
-    
-    !!!Deprecated!!!
-
-    Parameters
-    ----------
-    
-    table : table with the data
-    
-    columns : name of the columns ought to be used
-    
-    limits : dictionary with the limits (tuple) for the columns
-    filename : name of the file to save to
-    '''
-    
-    # create a figure with the correct proportions
-    fig, axes = plt.subplots(nrows=len(columns)-1,ncols=len(columns),figsize=(figsize,aspect_ratio*(len(columns)/(len(columns)+1))*figsize))
-
-    #gs = axes[1,1].get_gridspec()
-
-
-    for i,row in enumerate(columns[1:]):
-        for j,col in enumerate(columns):
-            ax=axes[i,j]
-            if j>i:
-                ax.remove()
-            else:
-                if j==0:
-                    ax.set_ylabel(labels.get(row,row.replace("_","")))
-                else:
-                    ax.set_yticklabels([])
-                if i==len(columns)-2:
-                    ax.set_xlabel(labels.get(col,col.replace("_","")))
-                else:
-                    ax.set_xticklabels([])
-
-                
-                x,y = table[col],table[row]
-                x,y = x[~np.isnan(x) & ~np.isnan(y)], y[~np.isnan(x) & ~np.isnan(y)]
-                
-                
-                xy = np.vstack([x,y])
-                z = gaussian_kde(xy)(xy)
-                idx = z.argsort()
-                x, y, z = x[idx], y[idx], z[idx]
-                sc=ax.scatter(x,y,c=z,cmap=plt.cm.Reds,**kwargs)
-
-                #density_scatter(x,y,ax)
-
-                xlim = limits.get(col,None)
-                ylim = limits.get(row,None)
-                if xlim: 
-                    x,mean,std = bin_stat(table[col],table[row],xlim,nbins=nbins,statistic='median')
-                    ax.errorbar(x,mean,yerr=std,fmt='-',color='gray',lw=0.5)
-                    ax.set_xlim(xlim)
-
-                if ylim: ax.set_ylim(ylim)
-
-                #
-                if one_to_one:
-                    if not xlim:
-                        xlim = ax.get_xlim()
-                    if not ylim:
-                        ylim = ax.get_ylim()
-                    lim = np.min([xlim[0],ylim[0]]),np.max([xlim[1],ylim[1]])
-                    ax.plot(lim,lim,color='black')
-                    ax.set(xlim=lim,ylim=lim)
-
-                # calculate spearmann correlation
-                not_nan = ~np.isnan(table[col]) & ~np.isnan(table[row])
-                r,p = spearmanr(table[col][not_nan],table[row][not_nan])
-    
-                #t = ax.text(0.07,0.85,r'$\rho'+f'={r:.2f}$',transform=ax.transAxes,fontsize=7)
-                #t.set_bbox(dict(facecolor='white', alpha=1, ec='white'))
-
-                #ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
-                #ax.yaxis.set_minor_locator(mpl.ticker.MaxNLocator(4))
-
-            # make sure the aspect ratio of each subplot is 1
-            #ax.set_aspect(aspect_ratio*np.diff(ax.get_xlim())/np.diff(ax.get_ylim()))
-            fix_aspect_ratio(ax,aspect_ratio=aspect_ratio)
-
-
-    #axbig = fig.add_subplot(gs[1,2:])
-    #fig.colorbar(sc,cax=axbig,label='density',ticks=[],orientation='horizontal')
 
     plt.subplots_adjust(wspace=0.12, hspace=0.12)
     

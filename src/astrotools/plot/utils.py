@@ -248,14 +248,15 @@ def fix_aspect_ratio(ax,aspect_ratio=1):
 
 from scipy.stats import binned_statistic
 
-def bin_stat(x,y,xlim,nbins=10,statistic='mean'):
+def bin_stat(x,y,bins=10,range=None,statistic='mean'):
     '''calculate the binned statistics'''
 
     # just ignore nan values
     x, y = x[~np.isnan(y) & np.isfinite(y)], y[~np.isnan(y) & np.isfinite(y)]
+    x, y = x[~np.isnan(x) & np.isfinite(x)], y[~np.isnan(x) & np.isfinite(x)]
 
-    mean, edges, _ = binned_statistic(x,y,statistic=statistic,bins=nbins,range=xlim)
-    std, _, _ = binned_statistic(x,y,statistic='std',bins=nbins,range=xlim)
+    mean, edges, _ = binned_statistic(x,y,statistic=statistic,bins=bins,range=range)
+    std, _, _ = binned_statistic(x,y,statistic='std',bins=bins,range=range)
     return (edges[1:]+edges[:-1])/2,mean,std
 
 
