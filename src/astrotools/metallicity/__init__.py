@@ -16,6 +16,8 @@ from .direct_methods import electron_density_sulfur, \
                             oxygen_abundance_direct
 from .ionization import logq_D91
 
+from .density import electron_density_from_ratio, ratio_from_electron_density
+
 from .utils import diagnostic_line_ratios
 
 __all__ = [
@@ -27,5 +29,7 @@ __all__ = [
             'electron_temperature_nitrogen',
             'oxygen_abundance_direct',
             'diagnostic_line_ratios',
-            'logq_D91'
+            'logq_D91',
+            'electron_density_from_ratio', 
+            'ratio_from_electron_density'
           ]

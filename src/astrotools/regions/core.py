@@ -196,7 +196,8 @@ class Regions:
 
         if filename:
             savefig(filename,dpi=600)
-        show()        
+
+        return ax       
 
     
     def __str__(self):
